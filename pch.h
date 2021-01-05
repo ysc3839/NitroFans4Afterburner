@@ -10,9 +10,17 @@
 // add headers that you want to pre-compile here
 #include "framework.h"
 
+namespace fs = std::filesystem;
+
 #include "SDK/MAHMSharedMemory.h"
 #include "SDK/MSIAfterburnerMonitoringSourceDesc.h"
 
+// wil
+#ifndef _DEBUG
+#define RESULT_DIAGNOSTICS_LEVEL 1
+#endif
+
 #include <wil/resource.h>
+#include <wil/com.h>
 
 #endif //PCH_H

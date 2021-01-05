@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AcerWMI.hpp"
 #include "Util.hpp"
 
 namespace NitroAPI
@@ -8,15 +9,15 @@ namespace NitroAPI
 	{
 		constexpr auto PipeName = LR"(\\.\pipe\PredatorSense_service_namedpipe)";
 
-		wil::unique_hfile hPipe;
+		wil::unique_hfile s_hPipe;
 
 		void ConnectPipe()
 		{
-			if (!hPipe)
+			if (!s_hPipe)
 			{
 				THROW_IF_WIN32_BOOL_FALSE(WaitNamedPipeW(PipeName, NMPWAIT_WAIT_FOREVER));
-				hPipe.reset(CreateFileW(PipeName, GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr));
-				THROW_LAST_ERROR_IF(!hPipe);
+				s_hPipe.reset(CreateFileW(PipeName, GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr));
+				THROW_LAST_ERROR_IF(!s_hPipe);
 			}
 		}
 
@@ -45,42 +46,26 @@ namespace NitroAPI
 					.data = data
 				} }
 			};
-			WriteFileCheckSize(hPipe.get(), &cmd, sizeof(cmd));
+			WriteFileCheckSize(s_hPipe.get(), &cmd, sizeof(cmd));
 
-			THROW_IF_WIN32_BOOL_FALSE(FlushFileBuffers(hPipe.get()));
+			THROW_IF_WIN32_BOOL_FALSE(FlushFileBuffers(s_hPipe.get()));
 
 			uint8_t buf[13];
-			ReadFileCheckSize(hPipe.get(), buf, sizeof(buf));
+			ReadFileCheckSize(s_hPipe.get(), buf, sizeof(buf));
 
 			return *reinterpret_cast<uint64_t*>(buf + 5);
 		}
 	}
 
-	enum class SystemHealthInformationIndex : uint32_t
+	uint16_t GetWMISystemHealthInfo(AcerWMI::SystemHealthInformationIndex index)
 	{
-		CPUTemperature = 1,
-		CPUFanSpeed,
-		SystemTemperature,
-		SystemFanSpeed,
-		FrostCore,
-		GPUFanSpeed,
-		System2Temperature,
-		System2FanSpeed,
-		GPU2FanSpeed,
-		GPU1Temperature,
-		GPU2Temperature
-	};
-
-	uint16_t GetWMISystemHealthInfo(SystemHealthInformationIndex index)
-	{
-		const uint32_t data = 1 | (static_cast<uint32_t>(index) << 8);
-		const auto result = GetAcerGamingSystemInformation(data);
+		const auto result = GetAcerGamingSystemInformation(AcerWMI::GetGamingSysInfoInput(index));
 		THROW_HR_IF(E_FAIL, (result & 0xff) != 0);
 		return static_cast<uint16_t>(result >> 8);
 	}
 
 	void Cleanup()
 	{
-		hPipe.reset();
+		s_hPipe.reset();
 	}
 }

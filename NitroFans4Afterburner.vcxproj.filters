@@ -27,6 +27,12 @@
     <ClInclude Include="Util.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="WMIAPI.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AcerWMI.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
