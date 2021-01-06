@@ -18,10 +18,6 @@ namespace WMIAPI
 			if (s_init)
 				return;
 
-			THROW_IF_FAILED(CoInitializeEx(0, COINIT_MULTITHREADED));
-
-			THROW_IF_FAILED(CoInitializeSecurity(nullptr, -1, nullptr, nullptr, RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE, nullptr, EOAC_SECURE_REFS, nullptr));
-
 			auto locator = wil::CoCreateInstance<IWbemLocator>(CLSID_WbemLocator);
 
 			THROW_IF_FAILED(locator->ConnectServer(wil::make_bstr(LR"(ROOT\WMI)").get(), nullptr, nullptr, nullptr, 0, nullptr, nullptr, s_namespace.put()));
