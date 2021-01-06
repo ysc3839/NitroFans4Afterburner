@@ -10,8 +10,8 @@ namespace WMIAPI
 		wil::com_ptr<IWbemServices> s_namespace;
 		wil::unique_bstr s_instPath;
 		wil::unique_bstr s_methodName;
-		wil::com_ptr<IWbemClassObject> s_inParams;
-		wil::unique_variant s_paramCache[AcerWMI::SystemHealthInformationIndexCount] = {};
+		wil::com_ptr<IWbemClassObject> s_inParamsClass;
+		wil::com_ptr<IWbemClassObject> s_paramsCache[AcerWMI::SystemHealthInformationIndexCount] = {};
 
 		void Init()
 		{
@@ -49,10 +49,7 @@ namespace WMIAPI
 
 			s_methodName = wil::make_bstr(L"GetGamingSysInfo");
 
-			wil::com_ptr<IWbemClassObject> inParamsClass;
-			THROW_IF_FAILED(wmiClass->GetMethod(s_methodName.get(), 0, inParamsClass.put(), nullptr));
-
-			THROW_IF_FAILED(inParamsClass->SpawnInstance(0, s_inParams.put()));
+			THROW_IF_FAILED(wmiClass->GetMethod(s_methodName.get(), 0, s_inParamsClass.put(), nullptr));
 
 			s_init = true;
 		}
@@ -63,18 +60,24 @@ namespace WMIAPI
 	{
 		Init();
 
-		auto& v = s_paramCache[static_cast<size_t>(index)];
-		if (V_VT(&v) == VT_EMPTY)
+		auto& inParam = s_paramsCache[static_cast<size_t>(index)];
+		if (!inParam)
 		{
+			wil::com_ptr<IWbemClassObject> temp;
+			THROW_IF_FAILED(s_inParamsClass->SpawnInstance(0, temp.put()));
+
+			wil::unique_variant v;
 			V_VT(&v) = VT_UI4;
 			V_UI4(&v) = AcerWMI::GetGamingSysInfoInput(index);
 			THROW_IF_FAILED(VariantChangeType(&v, &v, 0, VT_BSTR));
+
+			THROW_IF_FAILED(temp->Put(L"gmInput", 0, &v, CIM_UINT32));
+
+			inParam = std::move(temp);
 		}
 
-		THROW_IF_FAILED(s_inParams->Put(L"gmInput", 0, &v, CIM_UINT32));
-
 		wil::com_ptr<IWbemClassObject> outParams;
-		THROW_IF_FAILED(s_namespace->ExecMethod(s_instPath.get(), s_methodName.get(), 0, nullptr, s_inParams.get(), outParams.put(), nullptr));
+		THROW_IF_FAILED(s_namespace->ExecMethod(s_instPath.get(), s_methodName.get(), 0, nullptr, inParam.get(), outParams.put(), nullptr));
 
 		wil::unique_variant output;
 		CIMTYPE type;
@@ -91,11 +94,11 @@ namespace WMIAPI
 	{
 		s_instPath.reset();
 		s_methodName.reset();
-		s_inParams.reset();
+		s_inParamsClass.reset();
 		s_namespace.reset();
 
-		for (auto& v : s_paramCache)
-			v.reset();
+		for (auto& i : s_paramsCache)
+			i.reset();
 
 		s_init = false;
 	}
